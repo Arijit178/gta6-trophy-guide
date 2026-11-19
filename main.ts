@@ -14,13 +14,24 @@
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-frontend.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+
+// This guide hands in all 55 official trophies: refuse to build a dossier
+// from a trophy file that is short, or that leaves any trophy without a guide.
+const trophyList = JSON.parse(readFileSync(join(here, 'app', 'data', 'trophies.json'), 'utf8'));
+if (!Array.isArray(trophyList.trophies) || trophyList.trophies.length !== 55) {
+  throw new Error(`expected 55 trophies in app/data/trophies.json, found ${trophyList.trophies?.length ?? 0}`);
+}
+for (const trophy of trophyList.trophies) {
+  if (typeof trophy.guide !== 'string' || !trophy.guide.trim()) throw new Error(`trophy ${trophy.name} has no guide`);
+  if (!Array.isArray(trophy.sources) || trophy.sources.length === 0) throw new Error(`trophy ${trophy.name} has no cited source`);
+}
 
 mkdirSync(out, { recursive: true });
 cpSync(join(here, 'app'), join(out, 'app'), { recursive: true });
